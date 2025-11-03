@@ -8,6 +8,7 @@ import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
 
 @RestController
 public class ChatController {
@@ -52,5 +53,20 @@ public class ChatController {
     var resp = responseSpec.content();
     log.info("responseSpec content : {} ", resp);
     return resp;
+  }
+
+  @PostMapping("/v2/chats/stream")
+  public Flux<String> chatWithStream(@RequestBody UserInput userInput) {
+    return chatClient.prompt().user(userInput.prompt()).stream()
+        .content()
+        .log()
+        .onErrorResume(
+            e -> {
+              log.error("Error occurred: {}", e.getMessage());
+              //              return Flux.just("Error occurred while streaming the response");
+              return Flux.error(
+                  new RuntimeException(
+                      "Error occurred while streaming the response : " + e.getMessage()));
+            });
   }
 }
